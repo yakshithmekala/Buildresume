@@ -43,6 +43,8 @@ export interface CertificationItem {
   highlight?: boolean;
 }
 
+export type ResumeSectionId = 'summary' | 'skills' | 'projects' | 'education' | 'certifications' | 'achievements';
+
 export interface ResumeData {
   contact: ContactInfo;
   summary: string;
@@ -52,6 +54,7 @@ export interface ResumeData {
   certifications: CertificationItem[];
   achievements: string[];
   solvedProblemsCount: number;
+  sectionOrder?: ResumeSectionId[];
 }
 
 export type ResumeTheme = 

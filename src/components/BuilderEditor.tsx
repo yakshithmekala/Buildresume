@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ResumeData, EducationItem, ProjectItem, SkillCategory, CertificationItem } from '../types/resume';
-import { User, Briefcase, GraduationCap, Award, Code, Sparkles, Plus, Trash2, ChevronDown, ChevronUp, Save, RotateCcw } from 'lucide-react';
+import { ResumeData, EducationItem, ProjectItem, CertificationItem, ResumeSectionId } from '../types/resume';
+import { autoFormatAndSortResume } from '../utils/formatResumeData';
+import { User, Briefcase, GraduationCap, Award, Code, Sparkles, Plus, Trash2, ChevronDown, ChevronUp, RotateCcw, Wand2, ArrowUp, ArrowDown, Layers } from 'lucide-react';
 
 interface BuilderEditorProps {
   data: ResumeData;
@@ -10,6 +11,35 @@ interface BuilderEditorProps {
 
 export const BuilderEditor: React.FC<BuilderEditorProps> = ({ data, onChange, onReset }) => {
   const [activeSection, setActiveSection] = useState<string>('contact');
+  const [formatSuccess, setFormatSuccess] = useState(false);
+
+  // Auto Format & Sort
+  const handleAutoFormat = () => {
+    const formatted = autoFormatAndSortResume(data);
+    onChange(formatted);
+    setFormatSuccess(true);
+    setTimeout(() => setFormatSuccess(false), 2500);
+  };
+
+  // Section Reordering
+  const currentSectionOrder: ResumeSectionId[] = data.sectionOrder || [
+    'summary', 'skills', 'projects', 'education', 'certifications', 'achievements'
+  ];
+
+  const moveSection = (idx: number, direction: 'up' | 'down') => {
+    const newOrder = [...currentSectionOrder];
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= newOrder.length) return;
+    
+    const temp = newOrder[idx];
+    newOrder[idx] = newOrder[targetIdx];
+    newOrder[targetIdx] = temp;
+
+    onChange({
+      ...data,
+      sectionOrder: newOrder
+    });
+  };
 
   // Contact Change
   const handleContactChange = (field: keyof typeof data.contact, value: string) => {
@@ -152,22 +182,90 @@ export const BuilderEditor: React.FC<BuilderEditorProps> = ({ data, onChange, on
     onChange({ ...data, certifications: data.certifications.filter(c => c.id !== id) });
   };
 
+  const sectionLabels: Record<ResumeSectionId, string> = {
+    summary: 'Professional Summary',
+    skills: 'Technical Skills',
+    projects: 'Key Projects',
+    education: 'Education',
+    certifications: 'Certifications',
+    achievements: 'Key Achievements'
+  };
+
   return (
     <aside className="w-full lg:w-96 bg-slate-900 border-r border-slate-800 p-4 overflow-y-auto max-h-screen text-xs text-slate-200">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+      
+      {/* Top Controls */}
+      <div className="pb-3 border-b border-slate-800 mb-3 flex items-center justify-between">
         <h2 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-sky-400" /> Resume Builder Panel
+          <Sparkles className="w-4 h-4 text-sky-400" /> Resume Builder
         </h2>
         <button
           onClick={onReset}
           className="text-slate-400 hover:text-red-400 flex items-center gap-1 text-[11px] transition-colors"
-          title="Reset to Original Resume Data"
+          title="Reset to Original Data"
         >
           <RotateCcw className="w-3.5 h-3.5" /> Reset
         </button>
       </div>
 
-      {/* Accordion Buttons */}
+      {/* 1-Click Auto Format & Perfect Order Button */}
+      <button
+        onClick={handleAutoFormat}
+        className={`w-full py-2.5 px-3 mb-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all ${
+          formatSuccess
+            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-lg shadow-emerald-500/10'
+            : 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white border-transparent shadow-md shadow-sky-500/20'
+        }`}
+      >
+        <Wand2 className="w-4 h-4 text-amber-300 animate-pulse" />
+        {formatSuccess ? '✨ Auto-Formatted & Sorted Perfectly!' : '✨ Auto-Format & Perfect Order'}
+      </button>
+
+      {/* Section Reorder Control Accordion */}
+      <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/60 mb-3">
+        <button
+          onClick={() => setActiveSection(activeSection === 'reorder' ? '' : 'reorder')}
+          className="w-full px-3 py-2 flex items-center justify-between font-bold text-indigo-400 bg-slate-900/90 hover:bg-slate-800 text-xs"
+        >
+          <span className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-indigo-400" /> Reorder Resume Sections
+          </span>
+          {activeSection === 'reorder' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+
+        {activeSection === 'reorder' && (
+          <div className="p-2 space-y-1.5 bg-slate-950">
+            <p className="text-[11px] text-slate-400 mb-2 italic">
+              Move sections up or down to customize your resume structure:
+            </p>
+            {currentSectionOrder.map((secId, idx) => (
+              <div key={secId} className="flex items-center justify-between bg-slate-900 px-2.5 py-1.5 rounded border border-slate-800 text-xs">
+                <span className="font-semibold text-slate-200">{idx + 1}. {sectionLabels[secId]}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    disabled={idx === 0}
+                    onClick={() => moveSection(idx, 'up')}
+                    className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
+                    title="Move Up"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    disabled={idx === currentSectionOrder.length - 1}
+                    onClick={() => moveSection(idx, 'down')}
+                    className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
+                    title="Move Down"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Accordion Edit Forms */}
       <div className="space-y-3">
         {/* Contact Section */}
         <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/60">
