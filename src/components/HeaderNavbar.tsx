@@ -137,7 +137,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   // Analyze JD text
   const handleJdTextChange = (text: string) => {
     setJdText(text);
-    if (text.trim().length > 20) {
+    if (text.trim().length > 0) {
       const result = analyzeJd(data, text);
       setJdAnalysis(result);
     } else {
@@ -616,25 +616,28 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
                     </div>
                   </div>
                 )}
-
-                <button
-                  onClick={() => {
-                    handleTailorForJd();
-                    setShowJdModal(false);
-                  }}
-                  className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all mt-2"
-                >
-                  <Rocket className="w-4 h-4 text-emerald-200" /> Tailor Resume & Auto-Pick Best Template
-                </button>
               </div>
             )}
 
-            <div className="flex justify-end pt-2">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
               <button
                 onClick={() => setShowJdModal(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
+                className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold"
               >
                 Close
+              </button>
+              <button
+                onClick={() => {
+                  if (!jdText.trim()) {
+                    alert('Please paste a Job Description (JD) text into the text area first!');
+                    return;
+                  }
+                  handleTailorForJd();
+                  setShowJdModal(false);
+                }}
+                className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 transition-all"
+              >
+                <Rocket className="w-4 h-4 text-emerald-200" /> Tailor Resume & Auto-Pick Best Template
               </button>
             </div>
 
