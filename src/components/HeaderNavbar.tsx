@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ResumeTheme, ResumeData } from '../types/resume';
 import { sampleProfiles } from '../data/sampleProfiles';
-import { analyzeJd, tailorResumeForJd, JdAnalysisResult } from '../utils/jdOptimizer';
+import { analyzeJd, tailorResumeForJd, generateRoleBasedResume, PRESET_TARGET_ROLES, JdAnalysisResult } from '../utils/jdOptimizer';
 import { recommendBestTemplate } from '../utils/aiTemplatePicker';
 import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2, Users, Target, Rocket, CheckCircle2, AlertCircle, X, Bot } from 'lucide-react';
 
@@ -35,6 +35,15 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   // AI Recommendation Notification State
   const [aiRecommendationMsg, setAiRecommendationMsg] = useState<string | null>(null);
 
+  // Handle Role Selection
+  const handleSelectTargetRole = (roleId: string) => {
+    const { tailoredData, recommendedTheme, roleTitle } = generateRoleBasedResume(data, roleId, jdText);
+    onImportJson(tailoredData);
+    setTheme(recommendedTheme);
+    setAiRecommendationMsg(`🎯 Resume formatted for ${roleTitle}! Auto-selected best template.`);
+    setTimeout(() => setAiRecommendationMsg(null), 5000);
+  };
+
   // AI Auto-Pick Template
   const handleAiPickTemplate = (jd: string = jdText) => {
     const rec = recommendBestTemplate(data, jd);
@@ -57,11 +66,12 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   // Tailor Resume for JD
   const handleTailorForJd = () => {
     if (!jdText.trim()) return;
-    const { tailoredData, analysis } = tailorResumeForJd(data, jdText);
+    const { tailoredData, analysis, recommendedTheme } = tailorResumeForJd(data, jdText);
     onImportJson(tailoredData);
     setJdAnalysis(analysis);
-    // Also auto-pick the best template for this JD!
-    handleAiPickTemplate(jdText);
+    setTheme(recommendedTheme);
+    setAiRecommendationMsg(`🚀 Resume tailored & matched for target Job Description!`);
+    setTimeout(() => setAiRecommendationMsg(null), 5000);
   };
 
   // Direct 1-Click PDF Download to Downloads folder
@@ -147,21 +157,37 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
       <header className="no-print bg-slate-900 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md bg-opacity-90 px-4 py-3">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           
-          {/* Brand & User Profile Dropdown */}
-          <div className="flex items-center gap-3 w-full md:w-auto justify-between">
-            <div className="flex items-center gap-2.5">
+          {/* Brand, Target Role & User Profile Dropdown */}
+          <div className="flex items-center gap-2.5 w-full md:w-auto justify-between flex-wrap">
+            <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 font-extrabold text-lg">
                 Y
               </div>
               <div>
-                <h1 className="text-sm font-bold text-white leading-tight flex items-center gap-1.5">
+                <h1 className="text-sm font-bold text-white leading-tight">
                   {data.contact.fullName}
                 </h1>
                 <p className="text-xs text-slate-400">Interactive Resume & Builder</p>
               </div>
             </div>
 
-            {/* Preset Profile Selector (New User / Multi-User) */}
+            {/* Target Role Selector */}
+            <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-emerald-500/40 text-xs">
+              <Briefcase className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+              <select
+                onChange={(e) => handleSelectTargetRole(e.target.value)}
+                className="bg-transparent text-emerald-300 font-semibold text-xs focus:outline-none cursor-pointer"
+              >
+                <option value="">🎯 Target Job Role Format...</option>
+                {PRESET_TARGET_ROLES.map((r) => (
+                  <option key={r.id} value={r.id} className="bg-slate-900 text-slate-200">
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Profile Preset Switcher */}
             <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 text-xs">
               <Users className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
               <select
@@ -287,7 +313,7 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-            {/* Prominent Target JD Matcher Button */}
+            {/* Target JD Matcher Button */}
             <button
               onClick={() => setShowJdModal(true)}
               className="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow-md transition-all"
