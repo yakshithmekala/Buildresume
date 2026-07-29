@@ -148,12 +148,20 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   // Tailor Resume for JD
   const handleTailorForJd = () => {
     if (!jdText.trim()) return;
-    const { tailoredData, analysis, recommendedTheme } = tailorResumeForJd(data, jdText);
+    const baseProfile = savedProfileData || data;
+    const { tailoredData, analysis, recommendedTheme } = tailorResumeForJd(baseProfile, jdText);
     onImportJson(tailoredData);
     setJdAnalysis(analysis);
     setTheme(recommendedTheme);
-    setAiRecommendationMsg(`🚀 Resume tailored & matched for target Job Description!`);
-    setTimeout(() => setAiRecommendationMsg(null), 5000);
+    if (!isUnlocked) {
+      onUnlockSavedSuccess();
+    }
+    setAiRecommendationMsg(`🚀 Resume tailored & matched (${analysis.matchScore}% ATS Score)! Applied ${recommendedTheme.toUpperCase()} theme.`);
+    setTimeout(() => {
+      const preview = document.querySelector('.resume-container');
+      if (preview) preview.scrollIntoView({ behavior: 'smooth' });
+    }, 300);
+    setTimeout(() => setAiRecommendationMsg(null), 6000);
   };
 
   // Direct 1-Click PDF Download to Downloads folder
