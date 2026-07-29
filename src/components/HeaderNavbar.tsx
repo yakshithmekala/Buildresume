@@ -51,7 +51,6 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
     const selected = sampleProfiles.find(p => p.id === profileId);
     if (!selected) return;
 
-    // Check if selecting Yakshith's private profile
     if (selected.id === 'yakshith' && !isUnlocked) {
       setPendingProfileData(selected.data);
       setShowPasscodeModal(true);
@@ -211,7 +210,7 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
                     </span>
                   ) : (
                     <span className="bg-amber-500/20 text-amber-400 text-[10px] px-2 py-0.5 rounded-full font-medium border border-amber-500/30 flex items-center gap-1">
-                      <Lock className="w-3 h-3 text-amber-400" /> Passcode Protected
+                      <Lock className="w-3 h-3 text-amber-400" /> Protected
                     </span>
                   )}
                 </h1>
@@ -227,7 +226,7 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
                 className="bg-transparent text-slate-300 font-semibold text-xs focus:outline-none cursor-pointer"
               >
                 <option value="blank">✨ Blank Starter (New User)</option>
-                <option value="yakshith">🔒 Mekala Yakshith Reddy (PIN Required)</option>
+                <option value="yakshith">🔒 Private Profile (Passcode Protected)</option>
                 <option value="frontend">💻 Frontend React Specialist</option>
               </select>
             </div>
@@ -244,10 +243,10 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
             ) : (
               <button
                 onClick={() => setShowPasscodeModal(true)}
-                title="Enter PIN 1919 to unlock private profile"
+                title="Unlock Private Profile"
                 className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1"
               >
-                <KeyIcon className="w-3.5 h-3.5" /> Unlock (PIN 1919)
+                <KeyIcon className="w-3.5 h-3.5" /> Unlock Profile
               </button>
             )}
 
