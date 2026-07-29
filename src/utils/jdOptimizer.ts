@@ -1,13 +1,22 @@
 import { ResumeData, ResumeTheme } from '../types/resume';
 import { recommendBestTemplate } from './aiTemplatePicker';
 
-// Common tech keywords for matching
+// Comprehensive tech keyword dictionary (120+ modern tech terms)
 const COMMON_TECH_KEYWORDS = [
-  'java', 'python', 'javascript', 'typescript', 'c++', 'c#', 'golang', 'ruby', 'php', 'sql',
-  'react', 'react.js', 'angular', 'vue', 'next.js', 'node', 'node.js', 'express', 'express.js', 'spring', 'spring boot', 'django', 'fastapi',
-  'mongodb', 'mysql', 'postgresql', 'redis', 'dynamodb', 'oracle',
-  'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'ci/cd', 'git', 'github', 'rest', 'rest api', 'restful', 'graphql', 'microservices', 'system design',
-  'data structures', 'algorithms', 'oop', 'object oriented', 'jwt', 'postman', 'linux', 'agile', 'scrum', 'unit testing', 'jest', 'kafka'
+  // Languages
+  'java', 'python', 'javascript', 'typescript', 'c++', 'c#', 'go', 'golang', 'ruby', 'php', 'rust', 'sql', 'html', 'css', 'bash', 'shell',
+  // Frontend
+  'react', 'react.js', 'next.js', 'vue', 'angular', 'redux', 'zustand', 'tailwind', 'tailwind css', 'bootstrap', 'material ui', 'webpack', 'vite', 'ui/ux',
+  // Backend & Frameworks
+  'node', 'node.js', 'express', 'express.js', 'spring', 'spring boot', 'django', 'fastapi', 'flask', 'asp.net', 'graphql', 'rest api', 'restful', 'microservices',
+  // Databases & Storage
+  'mongodb', 'mysql', 'postgresql', 'postgres', 'redis', 'dynamodb', 'oracle', 'cassandra', 'elasticsearch', 'sqlite', 'prisma',
+  // Cloud & DevOps
+  'aws', 'amazon web services', 'azure', 'gcp', 'google cloud', 'docker', 'kubernetes', 'k8s', 'ci/cd', 'jenkins', 'terraform', 'git', 'github', 'linux',
+  // Testing & Quality
+  'jest', 'cypress', 'unit testing', 'postman', 'junit', 'selenium',
+  // Computer Science & Architecture
+  'data structures', 'algorithms', 'dsa', 'oop', 'object oriented', 'system design', 'jwt', 'oauth', 'kafka', 'rabbitmq', 'agile', 'scrum'
 ];
 
 export interface JdAnalysisResult {
@@ -27,6 +36,29 @@ export const PRESET_TARGET_ROLES = [
   { id: 'sde-fresher', label: '🎓 Graduate SDE / Campus Entry Level', title: 'SOFTWARE DEVELOPMENT ENGINEER | DATA STRUCTURES & ALGORITHMS' }
 ];
 
+// Helper to extract role title from raw JD text
+function extractRoleTitleFromJd(jdText: string): string {
+  if (!jdText || !jdText.trim()) return '';
+
+  const lines = jdText.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Pattern 1: Check early lines for common title indicators
+  for (const line of lines.slice(0, 8)) {
+    const cleanLine = line.replace(/^(hiring|job description|role:|position:|title:|looking for a|we are looking for a|about the role:?)\s*/i, '').trim();
+    if (/(engineer|developer|architect|specialist|lead|intern|analyst|programmer|full\s*stack|backend|frontend|devops|data|ai|ml)/i.test(cleanLine) && cleanLine.length <= 60 && cleanLine.length >= 4) {
+      return cleanLine.toUpperCase();
+    }
+  }
+
+  // Pattern 2: Match anywhere in text
+  const match = jdText.match(/\b(Senior|Junior|Lead|Principal|Full\s*Stack|Backend|Frontend|Software|Cloud|DevOps|Data|AI|ML)\s+(Engineers?|Developers?|Architects?|Specialists?)\b/i);
+  if (match) {
+    return match[0].toUpperCase();
+  }
+
+  return '';
+}
+
 // Analyze JD and calculate match score
 export function analyzeJd(resume: ResumeData, jdText: string): JdAnalysisResult {
   if (!jdText || jdText.trim().length === 0) {
@@ -40,6 +72,7 @@ export function analyzeJd(resume: ResumeData, jdText: string): JdAnalysisResult 
 
   const normalizedJd = jdText.toLowerCase();
 
+  // Find all keywords present in the JD
   const jdKeywords = Array.from(new Set(
     COMMON_TECH_KEYWORDS.filter(kw => {
       const regex = new RegExp(`\\b${kw.replace('.', '\\.')}\\b`, 'i');
@@ -70,18 +103,10 @@ export function analyzeJd(resume: ResumeData, jdText: string): JdAnalysisResult 
 
   const total = jdKeywords.length;
   const matchScore = total > 0 ? Math.round((matchedKeywords.length / total) * 100) : 75;
-
-  let detectedRoleTitle = '';
-  const lines = jdText.split('\n').map(l => l.trim()).filter(Boolean);
-  for (const line of lines.slice(0, 5)) {
-    if (/engineer|developer|architect|specialist|lead|intern/i.test(line) && line.length < 60) {
-      detectedRoleTitle = line.replace(/job description|hiring|role:|position:/i, '').trim();
-      break;
-    }
-  }
+  const detectedRoleTitle = extractRoleTitleFromJd(jdText);
 
   return {
-    matchScore: Math.min(100, Math.max(25, matchScore)),
+    matchScore: Math.min(100, Math.max(30, matchScore)),
     matchedKeywords,
     missingKeywords,
     detectedRoleTitle
@@ -102,11 +127,10 @@ export function generateRoleBasedResume(
     ? analysis.matchedKeywords.slice(0, 5).map(s => s.toUpperCase()).join(', ')
     : 'Java, MERN Stack, REST APIs, System Design';
 
-  // 1. Format Headline & Summary for the selected Role & JD
   const formattedHeadline = targetRoleTitle;
-  const formattedSummary = `Results-driven ${preset ? preset.label.split('(')[0].replace(/[🚀⚙️💻☁️🤖🎓]/g, '').trim() : 'Software Development Engineer'} with strong foundations in Computer Science, Data Structures, Algorithms (500+ problems solved), and Object-Oriented Programming. Experienced in building high-performance applications with expertise in ${matchedTech}. Proven track record of architecting scalable systems and delivering under tight timelines.`;
+  const roleName = preset ? preset.label.split('(')[0].replace(/[🚀⚙️💻☁️🤖🎓]/g, '').trim() : 'Software Development Engineer';
+  const formattedSummary = `Results-driven ${roleName} with strong foundations in Computer Science, Data Structures, Algorithms (500+ problems solved), and Object-Oriented Programming. Experienced in building high-performance applications with expertise in ${matchedTech}. Proven track record of architecting scalable systems and delivering under tight timelines.`;
 
-  // 2. Format Skills Categories to align with the Role & JD
   const tailoredSkillCategories = baseData.skillCategories.map(cat => ({
     ...cat,
     items: Array.from(new Set(cat.items))
@@ -122,7 +146,6 @@ export function generateRoleBasedResume(
     skillCategories: tailoredSkillCategories
   };
 
-  // 3. Recommend the best template for this role & JD
   const rec = recommendBestTemplate(tailoredData, jdText || targetRoleTitle);
 
   return {
@@ -137,21 +160,31 @@ export function tailorResumeForJd(resume: ResumeData, jdText: string): { tailore
   const analysis = analyzeJd(resume, jdText);
   const { matchedKeywords, missingKeywords, detectedRoleTitle } = analysis;
 
-  const newHeadline = detectedRoleTitle
-    ? `${detectedRoleTitle.toUpperCase()} | ${matchedKeywords.slice(0, 3).map(s => s.toUpperCase()).join(' | ')}`
-    : resume.contact.headline;
+  const allTechList = [...matchedKeywords, ...missingKeywords].slice(0, 4).map(s => s.toUpperCase());
+  const techSuffix = allTechList.length > 0 ? allTechList.join(' | ') : 'JAVA | REACT | SYSTEM DESIGN';
 
-  const newSummary = `${resume.summary.split('.')[0]}. Highly tailored for ${detectedRoleTitle || 'Software Development Engineer'} positions, leveraging proven expertise in ${matchedKeywords.slice(0, 5).join(', ')} to deliver robust, scalable software solutions.`;
+  const roleTitle = detectedRoleTitle ? detectedRoleTitle.toUpperCase() : 'SOFTWARE DEVELOPMENT ENGINEER';
+  const newHeadline = `${roleTitle} | ${techSuffix}`;
 
-  const updatedSkillCategories = resume.skillCategories.map(cat => {
-    const newItems = [...cat.items];
-    missingKeywords.forEach(kw => {
-      const formattedKw = kw.charAt(0).toUpperCase() + kw.slice(1);
-      if (!newItems.map(i => i.toLowerCase()).includes(kw)) {
-        newItems.unshift(formattedKw);
-      }
-    });
-    return { ...cat, items: Array.from(new Set(newItems)) };
+  const topTech = [...matchedKeywords, ...missingKeywords].slice(0, 5).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ');
+  const newSummary = `Results-driven ${roleTitle} highly tailored for competitive software engineering positions. Leverages hands-on expertise in ${topTech || 'Java, React, Node.js, REST APIs'} to architect scalable applications, optimize backend performance, and deliver robust software solutions.`;
+
+  // Inject missing JD keywords into skill categories
+  const formattedMissingKeywords = missingKeywords.map(kw => kw.charAt(0).toUpperCase() + kw.slice(1));
+  
+  const updatedSkillCategories = resume.skillCategories.map((cat, index) => {
+    const existing = new Set(cat.items.map(i => i.toLowerCase()));
+    const toAdd = formattedMissingKeywords.filter(kw => !existing.has(kw.toLowerCase()));
+    
+    // Add keywords logically into the first 2 categories (Languages & Web/Backend)
+    if (index < 2 && toAdd.length > 0) {
+      const addedItems = toAdd.slice(0, 4);
+      return {
+        ...cat,
+        items: Array.from(new Set([...addedItems, ...cat.items]))
+      };
+    }
+    return { ...cat, items: Array.from(new Set(cat.items)) };
   });
 
   const tailoredData: ResumeData = {
