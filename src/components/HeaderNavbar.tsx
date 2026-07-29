@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ResumeTheme, ResumeData } from '../types/resume';
-import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather } from 'lucide-react';
+import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2 } from 'lucide-react';
 
 interface HeaderNavbarProps {
   theme: ResumeTheme;
@@ -20,8 +20,39 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   onImportJson,
 }) => {
   const [copied, setCopied] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  // Trigger Print to PDF
+  // Direct 1-Click PDF Download to Downloads folder
+  const handleDirectPdfDownload = async () => {
+    const element = document.querySelector('.resume-container') as HTMLElement;
+    if (!element) return;
+
+    setIsDownloading(true);
+    try {
+      // Dynamic import of html2pdf.js
+      const html2pdfModule = await import('html2pdf.js');
+      const html2pdf = (html2pdfModule as any).default || html2pdfModule;
+
+      const filename = `${data.contact.fullName.trim().replace(/\s+/g, '_')}_Resume.pdf`;
+
+      const opt = {
+        margin: [0.15, 0.15, 0.15, 0.15],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+    } catch (err) {
+      console.error('Direct PDF export error, falling back to browser print:', err);
+      window.print();
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Browser Print option
   const handlePrint = () => {
     window.print();
   };
@@ -83,8 +114,8 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
             <div>
               <h1 className="text-sm font-bold text-white leading-tight flex items-center gap-1.5">
                 Mekala Yakshith Reddy
-                <span className="bg-sky-500/20 text-sky-400 text-[10px] px-2 py-0.5 rounded-full font-medium border border-sky-500/30">
-                  7 Templates
+                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-medium border border-emerald-500/30">
+                  Direct Download Ready
                 </span>
               </h1>
               <p className="text-xs text-slate-400">Software Development Engineer</p>
@@ -208,11 +239,27 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
             {copied ? 'Copied!' : 'Copy ATS Text'}
           </button>
 
+          {/* Direct Download PDF Button */}
+          <button
+            onClick={handleDirectPdfDownload}
+            disabled={isDownloading}
+            className="text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/25 transition-all disabled:opacity-50"
+          >
+            {isDownloading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {isDownloading ? 'Generating PDF...' : 'Download PDF'}
+          </button>
+
+          {/* Print Dialog Fallback Button */}
           <button
             onClick={handlePrint}
-            className="text-xs bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-sky-500/25 transition-all"
+            title="Print or Save via Browser Print Dialog"
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
           >
-            <Download className="w-4 h-4" /> Download PDF
+            <Printer className="w-4 h-4" />
           </button>
 
           <button
