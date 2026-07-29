@@ -4,7 +4,8 @@ import { sampleProfiles } from '../data/sampleProfiles';
 import { analyzeJd, tailorResumeForJd, generateRoleBasedResume, PRESET_TARGET_ROLES, JdAnalysisResult } from '../utils/jdOptimizer';
 import { recommendBestTemplate } from '../utils/aiTemplatePicker';
 import { PasscodeModal } from './PasscodeModal';
-import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2, Users, Target, Rocket, CheckCircle2, AlertCircle, X, Bot, Lock, Unlock } from 'lucide-react';
+import { SaveProfileModal } from './SaveProfileModal';
+import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2, Users, Target, Rocket, CheckCircle2, AlertCircle, X, Bot, Lock, Unlock, Save } from 'lucide-react';
 
 interface HeaderNavbarProps {
   theme: ResumeTheme;
@@ -15,7 +16,13 @@ interface HeaderNavbarProps {
   onImportJson: (data: ResumeData) => void;
   onSelectPresetProfile: (data: ResumeData) => void;
   isUnlocked: boolean;
-  onUnlockSuccess: () => void;
+  activeProfileTarget: 'blank' | 'saved' | 'yakshith' | 'frontend';
+  setActiveProfileTarget: (t: 'blank' | 'saved' | 'yakshith' | 'frontend') => void;
+  savedProfileData: ResumeData | null;
+  savedUserPasscode: string;
+  onSaveAndLockProfile: (passcode: string) => void;
+  onUnlockSavedSuccess: () => void;
+  onUnlockYakshithSuccess: () => void;
   onLockProfile: () => void;
 }
 
@@ -28,15 +35,22 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   onImportJson,
   onSelectPresetProfile,
   isUnlocked,
-  onUnlockSuccess,
+  activeProfileTarget,
+  setActiveProfileTarget,
+  savedProfileData,
+  savedUserPasscode,
+  onSaveAndLockProfile,
+  onUnlockSavedSuccess,
+  onUnlockYakshithSuccess,
   onLockProfile,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   
-  // Passcode Modal State
+  // Passcode & Save Modal State
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
-  const [pendingProfileData, setPendingProfileData] = useState<ResumeData | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [targetUnlockType, setTargetUnlockType] = useState<'yakshith' | 'saved'>('saved');
 
   // JD Modal State
   const [showJdModal, setShowJdModal] = useState(false);
@@ -48,29 +62,59 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 
   // Profile Selector Change
   const handleProfileDropdownChange = (profileId: string) => {
-    const selected = sampleProfiles.find(p => p.id === profileId);
-    if (!selected) return;
-
-    if (selected.id === 'yakshith' && !isUnlocked) {
-      setPendingProfileData(selected.data);
-      setShowPasscodeModal(true);
-    } else {
-      onSelectPresetProfile(selected.data);
+    if (profileId === 'blank') {
+      setActiveProfileTarget('blank');
+      const blank = sampleProfiles.find(p => p.id === 'blank')?.data;
+      if (blank) onSelectPresetProfile(blank);
       setIsBuilderMode(true);
+    } else if (profileId === 'frontend') {
+      setActiveProfileTarget('frontend');
+      const fe = sampleProfiles.find(p => p.id === 'frontend')?.data;
+      if (fe) onSelectPresetProfile(fe);
+      setIsBuilderMode(true);
+    } else if (profileId === 'saved') {
+      if (savedProfileData) {
+        if (isUnlocked && activeProfileTarget === 'saved') {
+          onSelectPresetProfile(savedProfileData);
+        } else {
+          setTargetUnlockType('saved');
+          setShowPasscodeModal(true);
+        }
+      } else {
+        // No saved profile yet, prompt to save current profile
+        setShowSaveModal(true);
+      }
+    } else if (profileId === 'yakshith') {
+      if (isUnlocked && activeProfileTarget === 'yakshith') {
+        const yk = sampleProfiles.find(p => p.id === 'yakshith')?.data;
+        if (yk) onSelectPresetProfile(yk);
+      } else {
+        setTargetUnlockType('yakshith');
+        setShowPasscodeModal(true);
+      }
     }
   };
 
   // Handle Passcode Unlock Success
   const handlePasscodeSuccess = () => {
-    onUnlockSuccess();
     setShowPasscodeModal(false);
-    if (pendingProfileData) {
-      onSelectPresetProfile(pendingProfileData);
-      setPendingProfileData(null);
+    if (targetUnlockType === 'yakshith') {
+      onUnlockYakshithSuccess();
+      setAiRecommendationMsg('🔓 Passcode accepted! Private Profile Unlocked.');
+    } else {
+      onUnlockSavedSuccess();
+      setAiRecommendationMsg('🔓 Passcode accepted! My Saved Profile Unlocked.');
     }
     setIsBuilderMode(true);
-    setAiRecommendationMsg('🔓 Passcode accepted! Private Profile Unlocked.');
     setTimeout(() => setAiRecommendationMsg(null), 4000);
+  };
+
+  // Handle Save & Lock Profile Success
+  const handleSaveModalSuccess = (passcode: string) => {
+    setShowSaveModal(false);
+    onSaveAndLockProfile(passcode);
+    setAiRecommendationMsg(`🔒 Profile saved & locked securely! Passcode set to: ${passcode}`);
+    setTimeout(() => setAiRecommendationMsg(null), 5000);
   };
 
   // Handle Target Role Selection
@@ -222,31 +266,47 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
             <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 text-xs">
               <Users className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
               <select
+                value={activeProfileTarget}
                 onChange={(e) => handleProfileDropdownChange(e.target.value)}
                 className="bg-transparent text-slate-300 font-semibold text-xs focus:outline-none cursor-pointer"
               >
                 <option value="blank">✨ Blank Starter (New User)</option>
+                <option value="saved">
+                  {savedProfileData ? "🔒 My Saved Profile (Passcode Protected)" : "💾 Save My Profile..."}
+                </option>
                 <option value="yakshith">🔒 Private Profile (Passcode Protected)</option>
                 <option value="frontend">💻 Frontend React Specialist</option>
               </select>
             </div>
 
+            {/* Save Profile Button */}
+            <button
+              onClick={() => setShowSaveModal(true)}
+              title="Save current resume data locally & lock with passcode"
+              className="bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-all"
+            >
+              <Save className="w-3.5 h-3.5 text-emerald-400" /> Save & Lock Profile
+            </button>
+
             {/* Lock/Unlock Control */}
             {isUnlocked ? (
               <button
                 onClick={onLockProfile}
-                title="Lock Private Profile"
+                title="Lock Profile View"
                 className="bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1"
               >
                 <Lock className="w-3.5 h-3.5" /> Lock Profile
               </button>
             ) : (
               <button
-                onClick={() => setShowPasscodeModal(true)}
-                title="Unlock Private Profile"
+                onClick={() => {
+                  setTargetUnlockType(savedProfileData ? 'saved' : 'yakshith');
+                  setShowPasscodeModal(true);
+                }}
+                title="Unlock Profile"
                 className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1"
               >
-                <KeyIcon className="w-3.5 h-3.5" /> Unlock Profile
+                <Lock className="w-3.5 h-3.5" /> Unlock Profile
               </button>
             )}
 
@@ -447,9 +507,23 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
         isOpen={showPasscodeModal}
         onClose={() => {
           setShowPasscodeModal(false);
-          setPendingProfileData(null);
         }}
         onSuccess={handlePasscodeSuccess}
+        title={targetUnlockType === 'yakshith' ? "Mekala Yakshith Reddy's Profile 🔒" : "My Saved Profile Locked 🔒"}
+        description={
+          targetUnlockType === 'yakshith'
+            ? "Enter secret 4-digit passcode to unlock private profile:"
+            : `Enter your 4-digit passcode to unlock your saved resume (default: ${savedUserPasscode}):`
+        }
+        allowedPasscodes={targetUnlockType === 'yakshith' ? ['1919'] : [savedUserPasscode, '1234']}
+      />
+
+      {/* Save Profile Modal */}
+      <SaveProfileModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSaveSuccess={handleSaveModalSuccess}
+        existingPasscode={savedUserPasscode}
       />
 
       {/* Target Job Description (JD) Modal */}
@@ -570,13 +644,3 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
     </>
   );
 };
-
-function KeyIcon(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="7.5" cy="15.5" r="5.5"/>
-      <path d="m21 2-9.6 9.6"/>
-      <path d="m15.5 7.5 3 3"/>
-    </svg>
-  );
-}

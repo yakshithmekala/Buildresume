@@ -1,13 +1,23 @@
 import React, { useState } from 'react';
-import { Lock, KeyRound, X, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Lock, KeyRound, X, ShieldAlert } from 'lucide-react';
 
 interface PasscodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  title?: string;
+  description?: string;
+  allowedPasscodes?: string[];
 }
 
-export const PasscodeModal: React.FC<PasscodeModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const PasscodeModal: React.FC<PasscodeModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  title = "Private Profile Locked 🔒",
+  description = "Enter your secret 4-digit passcode to unlock private resume data:",
+  allowedPasscodes = ['1919', '1234'],
+}) => {
   const [pinInput, setPinInput] = useState('');
   const [errorMsg, setErrorMsg] = useState(false);
 
@@ -15,7 +25,8 @@ export const PasscodeModal: React.FC<PasscodeModalProps> = ({ isOpen, onClose, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput.trim() === '1919') {
+    const inputPin = pinInput.trim();
+    if (allowedPasscodes.includes(inputPin)) {
       setErrorMsg(false);
       setPinInput('');
       onSuccess();
@@ -42,10 +53,10 @@ export const PasscodeModal: React.FC<PasscodeModalProps> = ({ isOpen, onClose, o
 
         <div>
           <h2 className="text-base font-extrabold text-white">
-            Private Profile Locked 🔒
+            {title}
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Enter the secret 4-digit passcode to unlock Mekala Yakshith Reddy's private resume:
+            {description}
           </p>
         </div>
 
@@ -55,7 +66,10 @@ export const PasscodeModal: React.FC<PasscodeModalProps> = ({ isOpen, onClose, o
               type="password"
               maxLength={4}
               value={pinInput}
-              onChange={(e) => setPinInput(e.target.value)}
+              onChange={(e) => {
+                setPinInput(e.target.value);
+                setErrorMsg(false);
+              }}
               placeholder="Enter Passcode..."
               autoFocus
               className="w-full bg-slate-950 border border-slate-700 rounded-xl py-3 px-4 text-center text-xl font-mono tracking-widest text-white focus:outline-none focus:border-amber-500"
