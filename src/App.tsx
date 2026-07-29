@@ -26,6 +26,7 @@ export function App() {
         setIsBuilderMode={setIsBuilderMode}
         data={resumeData}
         onImportJson={(newData) => setResumeData(newData)}
+        onSelectPresetProfile={(newProfileData) => setResumeData(newProfileData)}
       />
 
       {/* Main Content Area */}

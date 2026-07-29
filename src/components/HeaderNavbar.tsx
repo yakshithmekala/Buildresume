@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ResumeTheme, ResumeData } from '../types/resume';
-import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2 } from 'lucide-react';
+import { sampleProfiles } from '../data/sampleProfiles';
+import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2, UserPlus, Users } from 'lucide-react';
 
 interface HeaderNavbarProps {
   theme: ResumeTheme;
@@ -9,6 +10,7 @@ interface HeaderNavbarProps {
   setIsBuilderMode: (b: boolean) => void;
   data: ResumeData;
   onImportJson: (data: ResumeData) => void;
+  onSelectPresetProfile: (data: ResumeData) => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -18,6 +20,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   setIsBuilderMode,
   data,
   onImportJson,
+  onSelectPresetProfile,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -29,7 +32,6 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
 
     setIsDownloading(true);
     try {
-      // Dynamic import of html2pdf.js
       const html2pdfModule = await import('html2pdf.js');
       const html2pdf = (html2pdfModule as any).default || html2pdfModule;
 
@@ -105,7 +107,7 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
     <header className="no-print bg-slate-900 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md bg-opacity-90 px-4 py-3">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
         
-        {/* Brand & User Title */}
+        {/* Brand & User Profile Dropdown */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 font-extrabold text-lg">
@@ -113,13 +115,31 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
             </div>
             <div>
               <h1 className="text-sm font-bold text-white leading-tight flex items-center gap-1.5">
-                Mekala Yakshith Reddy
-                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-medium border border-emerald-500/30">
-                  Direct Download Ready
-                </span>
+                {data.contact.fullName}
               </h1>
-              <p className="text-xs text-slate-400">Software Development Engineer</p>
+              <p className="text-xs text-slate-400">Interactive Resume & Builder</p>
             </div>
+          </div>
+
+          {/* Preset Profile Selector (New User / Multi-User) */}
+          <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 text-xs">
+            <Users className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
+            <select
+              onChange={(e) => {
+                const selected = sampleProfiles.find(p => p.id === e.target.value);
+                if (selected) {
+                  onSelectPresetProfile(selected.data);
+                  setIsBuilderMode(true); // Open builder when selecting a new template
+                }
+              }}
+              className="bg-transparent text-slate-300 font-semibold text-xs focus:outline-none cursor-pointer"
+            >
+              {sampleProfiles.map((p) => (
+                <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Builder / Preview Toggle (Mobile) */}
