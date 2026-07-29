@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { blankResumeData } from './data/sampleProfiles';
 import { initialResumeData } from './data/yakshithResumeData';
 import { ResumeData, ResumeTheme } from './types/resume';
 import { HeaderNavbar } from './components/HeaderNavbar';
@@ -6,14 +7,21 @@ import { BuilderEditor } from './components/BuilderEditor';
 import { ResumePreview } from './components/ResumePreview';
 
 export function App() {
-  const [resumeData, setResumeData] = useState<ResumeData>(initialResumeData);
+  // Default to Blank Starter Mode on page load for visitor privacy
+  const [resumeData, setResumeData] = useState<ResumeData>(blankResumeData);
   const [theme, setTheme] = useState<ResumeTheme>('executive');
-  const [isBuilderMode, setIsBuilderMode] = useState<boolean>(false);
+  const [isBuilderMode, setIsBuilderMode] = useState<boolean>(true); // Open builder by default for new visitors
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
 
   const handleReset = () => {
     if (confirm('Reset resume data back to initial state?')) {
-      setResumeData(initialResumeData);
+      setResumeData(isUnlocked ? initialResumeData : blankResumeData);
     }
+  };
+
+  const handleLockProfile = () => {
+    setIsUnlocked(false);
+    setResumeData(blankResumeData);
   };
 
   return (
@@ -27,6 +35,9 @@ export function App() {
         data={resumeData}
         onImportJson={(newData) => setResumeData(newData)}
         onSelectPresetProfile={(newProfileData) => setResumeData(newProfileData)}
+        isUnlocked={isUnlocked}
+        onUnlockSuccess={() => setIsUnlocked(true)}
+        onLockProfile={handleLockProfile}
       />
 
       {/* Main Content Area */}

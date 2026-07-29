@@ -3,7 +3,8 @@ import { ResumeTheme, ResumeData } from '../types/resume';
 import { sampleProfiles } from '../data/sampleProfiles';
 import { analyzeJd, tailorResumeForJd, generateRoleBasedResume, PRESET_TARGET_ROLES, JdAnalysisResult } from '../utils/jdOptimizer';
 import { recommendBestTemplate } from '../utils/aiTemplatePicker';
-import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2, Users, Target, Rocket, CheckCircle2, AlertCircle, X, Bot } from 'lucide-react';
+import { PasscodeModal } from './PasscodeModal';
+import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2, Users, Target, Rocket, CheckCircle2, AlertCircle, X, Bot, Lock, Unlock } from 'lucide-react';
 
 interface HeaderNavbarProps {
   theme: ResumeTheme;
@@ -13,6 +14,9 @@ interface HeaderNavbarProps {
   data: ResumeData;
   onImportJson: (data: ResumeData) => void;
   onSelectPresetProfile: (data: ResumeData) => void;
+  isUnlocked: boolean;
+  onUnlockSuccess: () => void;
+  onLockProfile: () => void;
 }
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
@@ -23,25 +27,60 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   data,
   onImportJson,
   onSelectPresetProfile,
+  isUnlocked,
+  onUnlockSuccess,
+  onLockProfile,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   
+  // Passcode Modal State
+  const [showPasscodeModal, setShowPasscodeModal] = useState(false);
+  const [pendingProfileData, setPendingProfileData] = useState<ResumeData | null>(null);
+
   // JD Modal State
   const [showJdModal, setShowJdModal] = useState(false);
   const [jdText, setJdText] = useState('');
   const [jdAnalysis, setJdAnalysis] = useState<JdAnalysisResult | null>(null);
 
-  // AI Recommendation Notification State
+  // AI Notification State
   const [aiRecommendationMsg, setAiRecommendationMsg] = useState<string | null>(null);
 
-  // Handle Role Selection
+  // Profile Selector Change
+  const handleProfileDropdownChange = (profileId: string) => {
+    const selected = sampleProfiles.find(p => p.id === profileId);
+    if (!selected) return;
+
+    // Check if selecting Yakshith's private profile
+    if (selected.id === 'yakshith' && !isUnlocked) {
+      setPendingProfileData(selected.data);
+      setShowPasscodeModal(true);
+    } else {
+      onSelectPresetProfile(selected.data);
+      setIsBuilderMode(true);
+    }
+  };
+
+  // Handle Passcode Unlock Success
+  const handlePasscodeSuccess = () => {
+    onUnlockSuccess();
+    setShowPasscodeModal(false);
+    if (pendingProfileData) {
+      onSelectPresetProfile(pendingProfileData);
+      setPendingProfileData(null);
+    }
+    setIsBuilderMode(true);
+    setAiRecommendationMsg('🔓 Passcode accepted! Private Profile Unlocked.');
+    setTimeout(() => setAiRecommendationMsg(null), 4000);
+  };
+
+  // Handle Target Role Selection
   const handleSelectTargetRole = (roleId: string) => {
     const { tailoredData, recommendedTheme, roleTitle } = generateRoleBasedResume(data, roleId, jdText);
     onImportJson(tailoredData);
     setTheme(recommendedTheme);
-    setAiRecommendationMsg(`🎯 Resume formatted for ${roleTitle}! Auto-selected best template.`);
-    setTimeout(() => setAiRecommendationMsg(null), 5000);
+    setAiRecommendationMsg(`🎯 Resume formatted for ${roleTitle}!`);
+    setTimeout(() => setAiRecommendationMsg(null), 4000);
   };
 
   // AI Auto-Pick Template
@@ -157,56 +196,60 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
       <header className="no-print bg-slate-900 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md bg-opacity-90 px-4 py-3">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           
-          {/* Brand, Target Role & User Profile Dropdown */}
+          {/* Brand & Profile Selector */}
           <div className="flex items-center gap-2.5 w-full md:w-auto justify-between flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 font-extrabold text-lg">
                 Y
               </div>
               <div>
-                <h1 className="text-sm font-bold text-white leading-tight">
+                <h1 className="text-sm font-bold text-white leading-tight flex items-center gap-1.5">
                   {data.contact.fullName}
+                  {isUnlocked ? (
+                    <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-medium border border-emerald-500/30 flex items-center gap-1">
+                      <Unlock className="w-3 h-3 text-emerald-400" /> Unlocked
+                    </span>
+                  ) : (
+                    <span className="bg-amber-500/20 text-amber-400 text-[10px] px-2 py-0.5 rounded-full font-medium border border-amber-500/30 flex items-center gap-1">
+                      <Lock className="w-3 h-3 text-amber-400" /> Passcode Protected
+                    </span>
+                  )}
                 </h1>
                 <p className="text-xs text-slate-400">Interactive Resume & Builder</p>
               </div>
-            </div>
-
-            {/* Target Role Selector */}
-            <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-emerald-500/40 text-xs">
-              <Briefcase className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-              <select
-                onChange={(e) => handleSelectTargetRole(e.target.value)}
-                className="bg-transparent text-emerald-300 font-semibold text-xs focus:outline-none cursor-pointer"
-              >
-                <option value="">🎯 Target Job Role Format...</option>
-                {PRESET_TARGET_ROLES.map((r) => (
-                  <option key={r.id} value={r.id} className="bg-slate-900 text-slate-200">
-                    {r.label}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* Profile Preset Switcher */}
             <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 text-xs">
               <Users className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
               <select
-                onChange={(e) => {
-                  const selected = sampleProfiles.find(p => p.id === e.target.value);
-                  if (selected) {
-                    onSelectPresetProfile(selected.data);
-                    setIsBuilderMode(true);
-                  }
-                }}
+                onChange={(e) => handleProfileDropdownChange(e.target.value)}
                 className="bg-transparent text-slate-300 font-semibold text-xs focus:outline-none cursor-pointer"
               >
-                {sampleProfiles.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200">
-                    {p.name}
-                  </option>
-                ))}
+                <option value="blank">✨ Blank Starter (New User)</option>
+                <option value="yakshith">🔒 Mekala Yakshith Reddy (PIN Required)</option>
+                <option value="frontend">💻 Frontend React Specialist</option>
               </select>
             </div>
+
+            {/* Lock/Unlock Control */}
+            {isUnlocked ? (
+              <button
+                onClick={onLockProfile}
+                title="Lock Private Profile"
+                className="bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1"
+              >
+                <Lock className="w-3.5 h-3.5" /> Lock Profile
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowPasscodeModal(true)}
+                title="Enter PIN 1919 to unlock private profile"
+                className="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1"
+              >
+                <KeyIcon className="w-3.5 h-3.5" /> Unlock (PIN 1919)
+              </button>
+            )}
 
             {/* Builder / Preview Toggle (Mobile) */}
             <button
@@ -218,13 +261,28 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
             </button>
           </div>
 
+          {/* Target Role Selector */}
+          <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-emerald-500/40 text-xs">
+            <Briefcase className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+            <select
+              onChange={(e) => handleSelectTargetRole(e.target.value)}
+              className="bg-transparent text-emerald-300 font-semibold text-xs focus:outline-none cursor-pointer"
+            >
+              <option value="">🎯 Target Job Role Format...</option>
+              {PRESET_TARGET_ROLES.map((r) => (
+                <option key={r.id} value={r.id} className="bg-slate-900 text-slate-200">
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* 7 Themes Selector + 🤖 AI Auto-Pick Button */}
           <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full md:w-auto overflow-x-auto">
             <span className="text-slate-400 px-2 font-medium flex items-center gap-1">
               <Layout className="w-3.5 h-3.5 text-sky-400" /> Themes:
             </span>
             
-            {/* 🤖 AI Auto-Pick Best Template Button */}
             <button
               onClick={() => handleAiPickTemplate()}
               className="px-3 py-1 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold whitespace-nowrap flex items-center gap-1 shadow-md shadow-purple-500/20"
@@ -313,7 +371,6 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-            {/* Target JD Matcher Button */}
             <button
               onClick={() => setShowJdModal(true)}
               className="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 shadow-md transition-all"
@@ -343,7 +400,6 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
               {copied ? 'Copied!' : 'Copy ATS Text'}
             </button>
 
-            {/* Direct Download PDF Button */}
             <button
               onClick={handleDirectPdfDownload}
               disabled={isDownloading}
@@ -386,6 +442,16 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
           </div>
         )}
       </header>
+
+      {/* Secret Passcode Modal */}
+      <PasscodeModal
+        isOpen={showPasscodeModal}
+        onClose={() => {
+          setShowPasscodeModal(false);
+          setPendingProfileData(null);
+        }}
+        onSuccess={handlePasscodeSuccess}
+      />
 
       {/* Target Job Description (JD) Modal */}
       {showJdModal && (
@@ -505,3 +571,13 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
     </>
   );
 };
+
+function KeyIcon(props: any) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7.5" cy="15.5" r="5.5"/>
+      <path d="m21 2-9.6 9.6"/>
+      <path d="m15.5 7.5 3 3"/>
+    </svg>
+  );
+}
