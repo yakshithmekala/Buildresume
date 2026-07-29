@@ -26,10 +26,18 @@ export const CompactOnePageTemplate: React.FC<TemplateProps> = ({ data }) => {
           <a href={`tel:${contact.phone}`} className="hover:underline">{contact.phone}</a>
           <span>•</span>
           <a href={`mailto:${contact.email}`} className="font-semibold text-sky-800 hover:underline">{contact.email}</a>
-          <span>•</span>
-          <a href={contact.linkedin} target="_blank" rel="noreferrer" className="text-sky-800 hover:underline">LinkedIn</a>
-          <span>•</span>
-          <a href={contact.github} target="_blank" rel="noreferrer" className="text-sky-800 hover:underline">GitHub</a>
+          {contact.linkedin && (
+            <>
+              <span>•</span>
+              <a href={contact.linkedin} target="_blank" rel="noreferrer" className="text-sky-800 hover:underline">LinkedIn</a>
+            </>
+          )}
+          {contact.github && (
+            <>
+              <span>•</span>
+              <a href={contact.github} target="_blank" rel="noreferrer" className="text-sky-800 hover:underline">GitHub</a>
+            </>
+          )}
         </div>
       </header>
 

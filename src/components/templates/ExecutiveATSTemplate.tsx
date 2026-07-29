@@ -185,14 +185,14 @@ export const ExecutiveATSTemplate: React.FC<TemplateProps> = ({ data }) => {
           {contact.linkedin && (
             <a href={contact.linkedin} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sky-700 hover:underline">
               <Linkedin className="w-3.5 h-3.5 print:hidden" />
-              linkedin.com/in/yakshithreddy
+              {contact.linkedin.replace(/^https?:\/\/(www\.)?/, '')}
             </a>
           )}
-          <span className="text-slate-300">•</span>
+          {contact.linkedin && contact.github && <span className="text-slate-300">•</span>}
           {contact.github && (
             <a href={contact.github} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sky-700 hover:underline">
               <Github className="w-3.5 h-3.5 print:hidden" />
-              github.com/yakshithmekala
+              {contact.github.replace(/^https?:\/\/(www\.)?/, '')}
             </a>
           )}
         </div>
