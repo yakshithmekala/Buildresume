@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { ResumeTheme, ResumeData } from '../types/resume';
 import { sampleProfiles } from '../data/sampleProfiles';
 import { analyzeJd, tailorResumeForJd, JdAnalysisResult } from '../utils/jdOptimizer';
-import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2, Users, Target, Rocket, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { recommendBestTemplate } from '../utils/aiTemplatePicker';
+import { Download, Copy, Check, Edit3, Eye, FileJson, Sparkles, Layout, ShieldCheck, Gem, Briefcase, Feather, Printer, Loader2, Users, Target, Rocket, CheckCircle2, AlertCircle, X, Bot } from 'lucide-react';
 
 interface HeaderNavbarProps {
   theme: ResumeTheme;
@@ -31,6 +32,17 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   const [jdText, setJdText] = useState('');
   const [jdAnalysis, setJdAnalysis] = useState<JdAnalysisResult | null>(null);
 
+  // AI Recommendation Notification State
+  const [aiRecommendationMsg, setAiRecommendationMsg] = useState<string | null>(null);
+
+  // AI Auto-Pick Template
+  const handleAiPickTemplate = (jd: string = jdText) => {
+    const rec = recommendBestTemplate(data, jd);
+    setTheme(rec.recommendedTheme);
+    setAiRecommendationMsg(`🤖 AI selected ${rec.themeName}: ${rec.reason}`);
+    setTimeout(() => setAiRecommendationMsg(null), 5000);
+  };
+
   // Analyze JD text
   const handleJdTextChange = (text: string) => {
     setJdText(text);
@@ -48,6 +60,8 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
     const { tailoredData, analysis } = tailorResumeForJd(data, jdText);
     onImportJson(tailoredData);
     setJdAnalysis(analysis);
+    // Also auto-pick the best template for this JD!
+    handleAiPickTemplate(jdText);
   };
 
   // Direct 1-Click PDF Download to Downloads folder
@@ -178,12 +192,21 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
             </button>
           </div>
 
-          {/* 7 Themes Selector */}
+          {/* 7 Themes Selector + 🤖 AI Auto-Pick Button */}
           <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs w-full md:w-auto overflow-x-auto">
             <span className="text-slate-400 px-2 font-medium flex items-center gap-1">
               <Layout className="w-3.5 h-3.5 text-sky-400" /> Themes:
             </span>
             
+            {/* 🤖 AI Auto-Pick Best Template Button */}
+            <button
+              onClick={() => handleAiPickTemplate()}
+              className="px-3 py-1 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold whitespace-nowrap flex items-center gap-1 shadow-md shadow-purple-500/20"
+              title="Let AI automatically pick the best template for your target role"
+            >
+              <Bot className="w-3.5 h-3.5 text-amber-300 animate-bounce" /> AI Pick Template
+            </button>
+
             <button
               onClick={() => setTheme('executive')}
               className={`px-2.5 py-1 rounded-lg transition-all font-medium whitespace-nowrap flex items-center gap-1 ${
@@ -326,6 +349,16 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
           </div>
 
         </div>
+
+        {/* AI Recommendation Toast Banner */}
+        {aiRecommendationMsg && (
+          <div className="max-w-7xl mx-auto mt-2 bg-gradient-to-r from-purple-950/90 to-indigo-950/90 border border-purple-500/40 text-purple-200 px-4 py-2 rounded-xl text-xs flex items-center justify-between shadow-lg animate-fade-in">
+            <span className="font-semibold">{aiRecommendationMsg}</span>
+            <button onClick={() => setAiRecommendationMsg(null)} className="text-purple-400 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Target Job Description (JD) Modal */}
@@ -333,7 +366,6 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
           <div className="bg-slate-900 border border-slate-700 text-slate-100 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative space-y-4">
             
-            {/* Close Button */}
             <button
               onClick={() => setShowJdModal(false)}
               className="absolute top-4 right-4 p-1 rounded-lg text-slate-400 hover:text-white bg-slate-800"
@@ -355,7 +387,6 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
               </div>
             </div>
 
-            {/* Textarea */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Paste Job Description (JD) Text below:
@@ -369,7 +400,6 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
               />
             </div>
 
-            {/* Live ATS Analysis Output */}
             {jdAnalysis && (
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
                 <div className="flex justify-between items-center">
@@ -383,7 +413,6 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
                   </span>
                 </div>
 
-                {/* Progress bar */}
                 <div className="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden border border-slate-800">
                   <div
                     className={`h-full transition-all duration-500 ${
@@ -393,7 +422,6 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
                   />
                 </div>
 
-                {/* Matched Keywords */}
                 {jdAnalysis.matchedKeywords.length > 0 && (
                   <div>
                     <span className="block text-xs font-bold text-emerald-400 mb-1 flex items-center gap-1">
@@ -409,7 +437,6 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
                   </div>
                 )}
 
-                {/* Missing Keywords */}
                 {jdAnalysis.missingKeywords.length > 0 && (
                   <div>
                     <span className="block text-xs font-bold text-amber-400 mb-1 flex items-center gap-1">
@@ -425,7 +452,6 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
                   </div>
                 )}
 
-                {/* Tailor Button */}
                 <button
                   onClick={() => {
                     handleTailorForJd();
@@ -433,7 +459,7 @@ ${data.achievements.map(a => `• ${a}`).join('\n')}
                   }}
                   className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all mt-2"
                 >
-                  <Rocket className="w-4 h-4 text-emerald-200" /> Tailor Resume for this Job Description (JD)
+                  <Rocket className="w-4 h-4 text-emerald-200" /> Tailor Resume & Auto-Pick Best Template
                 </button>
               </div>
             )}
