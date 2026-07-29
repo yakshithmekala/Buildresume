@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ResumeData, EducationItem, ProjectItem, CertificationItem, ResumeSectionId } from '../types/resume';
 import { autoFormatAndSortResume } from '../utils/formatResumeData';
-import { User, Briefcase, GraduationCap, Award, Code, Sparkles, Plus, Trash2, ChevronDown, ChevronUp, RotateCcw, Wand2, ArrowUp, ArrowDown, Layers } from 'lucide-react';
+import { analyzeJd, tailorResumeForJd, JdAnalysisResult } from '../utils/jdOptimizer';
+import { User, Briefcase, GraduationCap, Award, Code, Sparkles, Plus, Trash2, ChevronDown, ChevronUp, RotateCcw, Wand2, ArrowUp, ArrowDown, Layers, Target, CheckCircle2, AlertCircle, Rocket } from 'lucide-react';
 
 interface BuilderEditorProps {
   data: ResumeData;
@@ -12,6 +13,29 @@ interface BuilderEditorProps {
 export const BuilderEditor: React.FC<BuilderEditorProps> = ({ data, onChange, onReset }) => {
   const [activeSection, setActiveSection] = useState<string>('contact');
   const [formatSuccess, setFormatSuccess] = useState(false);
+
+  // JD Matcher State
+  const [jdText, setJdText] = useState('');
+  const [jdAnalysis, setJdAnalysis] = useState<JdAnalysisResult | null>(null);
+
+  // Analyze JD on text change
+  const handleJdTextChange = (text: string) => {
+    setJdText(text);
+    if (text.trim().length > 20) {
+      const result = analyzeJd(data, text);
+      setJdAnalysis(result);
+    } else {
+      setJdAnalysis(null);
+    }
+  };
+
+  // 1-Click Tailor Resume for JD
+  const handleTailorForJd = () => {
+    if (!jdText.trim()) return;
+    const { tailoredData, analysis } = tailorResumeForJd(data, jdText);
+    onChange(tailoredData);
+    setJdAnalysis(analysis);
+  };
 
   // Auto Format & Sort
   const handleAutoFormat = () => {
@@ -197,7 +221,7 @@ export const BuilderEditor: React.FC<BuilderEditorProps> = ({ data, onChange, on
       {/* Top Controls */}
       <div className="pb-3 border-b border-slate-800 mb-3 flex items-center justify-between">
         <h2 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-sky-400" /> Resume Builder
+          <Sparkles className="w-4 h-4 text-sky-400" /> Resume Builder Panel
         </h2>
         <button
           onClick={onReset}
@@ -208,10 +232,102 @@ export const BuilderEditor: React.FC<BuilderEditorProps> = ({ data, onChange, on
         </button>
       </div>
 
+      {/* 🎯 Job Description (JD) Target Matcher Section */}
+      <div className="border border-emerald-500/30 rounded-xl overflow-hidden bg-slate-950/80 mb-3 shadow-lg shadow-emerald-500/5">
+        <button
+          onClick={() => setActiveSection(activeSection === 'jd' ? '' : 'jd')}
+          className="w-full px-3 py-2.5 flex items-center justify-between font-bold text-emerald-400 bg-slate-900/90 hover:bg-slate-800"
+        >
+          <span className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-emerald-400" /> Target Job Description (JD) Matcher
+          </span>
+          {activeSection === 'jd' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+
+        {activeSection === 'jd' && (
+          <div className="p-3 space-y-3 bg-slate-950">
+            <p className="text-[11px] text-slate-400">
+              Paste a Job Description (JD) below to calculate ATS match score & auto-tailor your resume:
+            </p>
+            <textarea
+              rows={4}
+              value={jdText}
+              onChange={(e) => handleJdTextChange(e.target.value)}
+              placeholder="Paste Job Description (JD) text here... (e.g., We are hiring a Software Engineer skilled in Java, React, MongoDB, AWS...)"
+              className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs leading-relaxed focus:outline-none focus:border-emerald-500"
+            />
+
+            {/* Analysis Meter & Keywords */}
+            {jdAnalysis && (
+              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-2.5">
+                {/* Score Bar */}
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-slate-300">ATS Match Score:</span>
+                  <span className={`font-black text-sm px-2 py-0.5 rounded ${
+                    jdAnalysis.matchScore >= 75 ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'
+                  }`}>
+                    {jdAnalysis.matchScore}% Match
+                  </span>
+                </div>
+
+                <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                  <div
+                    className={`h-full transition-all duration-500 ${
+                      jdAnalysis.matchScore >= 75 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-amber-500 to-yellow-400'
+                    }`}
+                    style={{ width: `${jdAnalysis.matchScore}%` }}
+                  />
+                </div>
+
+                {/* Matched Keywords */}
+                {jdAnalysis.matchedKeywords.length > 0 && (
+                  <div>
+                    <span className="block text-[10px] text-emerald-400 font-bold mb-1 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Matched Keywords ({jdAnalysis.matchedKeywords.length}):
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {jdAnalysis.matchedKeywords.map((kw, i) => (
+                        <span key={i} className="bg-emerald-950/80 text-emerald-300 font-mono text-[10px] px-1.5 py-0.5 rounded border border-emerald-800">
+                          ✓ {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Missing Keywords */}
+                {jdAnalysis.missingKeywords.length > 0 && (
+                  <div>
+                    <span className="block text-[10px] text-amber-400 font-bold mb-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Recommended JD Keywords ({jdAnalysis.missingKeywords.length}):
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {jdAnalysis.missingKeywords.map((kw, i) => (
+                        <span key={i} className="bg-amber-950/60 text-amber-300 font-mono text-[10px] px-1.5 py-0.5 rounded border border-amber-800">
+                          + {kw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tailor Button */}
+                <button
+                  onClick={handleTailorForJd}
+                  className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg font-bold flex items-center justify-center gap-1.5 shadow-md transition-all mt-2"
+                >
+                  <Rocket className="w-4 h-4 text-emerald-200" /> Tailor Resume for this JD
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* 1-Click Auto Format & Perfect Order Button */}
       <button
         onClick={handleAutoFormat}
-        className={`w-full py-2.5 px-3 mb-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all ${
+        className={`w-full py-2.5 px-3 mb-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition-all ${
           formatSuccess
             ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-lg shadow-emerald-500/10'
             : 'bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white border-transparent shadow-md shadow-sky-500/20'
